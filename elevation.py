@@ -50,7 +50,6 @@ try:
         resolution = str(result['resolution'])
         elevation = str(result['elevation'])
         sql="insert into el_point(area, lat, lng, res, elv) values ('" + area.name + "'," + lat + "," + lng + "," + resolution + "," + elevation + ");";
-	print sql
         cursor.execute(sql)
     db.commit()
 except:
