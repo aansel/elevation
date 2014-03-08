@@ -1,12 +1,13 @@
-import urllib2
+import httputils
 import json
 import random
 import MySQLdb
 import math
 import sys
 
+NB_REQUESTS = 10
 
-def getIdLocality(locality, area_lv2, area_lv1, country):
+def getIdLocality(locality, area_lv2, area_lv1, country, postal_code):
     db = MySQLdb.connect("localhost", "elevation", "elevation", "elevation" )
     cursor = db.cursor()
     try:
@@ -37,24 +38,27 @@ def getIdLocality(locality, area_lv2, area_lv1, country):
             idAreaLv2 = resSelectLv2[0]
 
         # Locality
-        selectLocality = "select id_locality from el_locality where name=\"" + locality  + "\""
+        selectLocality = "select id_locality from el_locality where name=\"" + locality  + "\" and id_area_lv2=" + str(idAreaLv2)
         cursor.execute(selectLocality)
         resLocality = cursor.fetchone()
         if (resLocality == None):
-            insertLocality = "insert into el_locality (id_area_lv2, name) values (" + str(idAreaLv2) + ", \"" + locality + "\")"
+            insertLocality = "insert into el_locality (id_area_lv2, name, zip_code) values (" + str(idAreaLv2) + ", \"" + locality + "\", " + postal_code + ")"
             cursor.execute(insertLocality)
             db.commit()
             cursor.execute(selectLocality)
             idLocality = cursor.fetchone()[0]
         else:
             idLocality = resLocality[0]
+            updateLocality = "update el_locality set zip_code=\"" + postal_code + "\" where id_locality=" + str(idLocality)
+            cursor.execute(updateLocality)
 
         db.commit()
+        db.close()
         return idLocality
     except:
         db.rollback()
-        raise
-    db.close()
+        db.close()
+        return -1
 
 
 def updateLocality():
@@ -71,13 +75,14 @@ def updateLocality():
             lng = res[2]
  
             url='https://maps.googleapis.com/maps/api/geocode/json?latlng=' + str(lat) + ',' + str(lng) + '&sensor=false&language=fr'
-
-            req = urllib2.Request(url)
-            opener = urllib2.build_opener()
-            f = opener.open(req)
-            jsonRes = json.loads(f.read())
+            jsonRes = json.loads(httputils.get(url))
 
             idLocality = -1
+            locality = None
+            area_lv2 = None
+            area_lv1 = None
+            country = None
+            postal_code = None
             for result in jsonRes['results']:
                 if ("locality" in result['types']):
                     for component in result['address_components']:
@@ -89,8 +94,13 @@ def updateLocality():
                             area_lv1 = component['long_name']
                         if ("country" in component['types']):
                             country = component['long_name']
+                if ("postal_code" in result['types']):
+                    for component in result['address_components']:
+                        if ("postal_code" in component['types']):
+                            postal_code = component['long_name']
 
-                    idLocality = getIdLocality(locality, area_lv2, area_lv1, country)
+            if (locality and area_lv2 and area_lv1 and country and postal_code):
+                idLocality = getIdLocality(locality, area_lv2, area_lv1, country, postal_code)
 
             update = "update el_point set id_locality=" + str(idLocality) + " where id=" + str(idPoint)
             cursor.execute(update)
@@ -100,4 +110,5 @@ def updateLocality():
         raise
     db.close()
 
-updateLocality()
+for i in range(0, NB_REQUESTS):
+    updateLocality()

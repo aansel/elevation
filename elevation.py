@@ -15,7 +15,7 @@ class Area:
         self.minLng = minLng
         self.maxLng = maxLng
 
-idf = Area("idf", 48.066870, 49.264027, 1.425928, 3.598475)
+idf = Area("idf", 48.1200811, 49.241504, 1.44617, 3.5590069)
 area = idf
 
 def getRandomPoint(minLat, maxLat, minLng, maxLng):
