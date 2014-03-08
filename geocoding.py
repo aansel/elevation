@@ -4,8 +4,9 @@ import random
 import MySQLdb
 import math
 import sys
+import time
 
-NB_REQUESTS = 10
+NB_REQUESTS = 30
 
 def getIdLocality(locality, area_lv2, area_lv1, country, postal_code):
     db = MySQLdb.connect("localhost", "elevation", "elevation", "elevation" )
@@ -110,5 +111,7 @@ def updateLocality():
         raise
     db.close()
 
+#for i in range (0, 3):
 for i in range(0, NB_REQUESTS):
     updateLocality()
+#time.sleep(3)
