@@ -1,3 +1,4 @@
+import threading
 import httputils
 import json
 import random
@@ -67,6 +68,7 @@ def updateLocality():
     db = MySQLdb.connect("localhost", "elevation", "elevation", "elevation" )
     cursor = db.cursor()
     try:
+        threadLock.acquire()
         select = "select id, lat, lng from el_point where id_locality is null limit 1"
         cursor.execute(select)
         res = cursor.fetchone()
@@ -74,6 +76,11 @@ def updateLocality():
             idPoint = res[0]
             lat = res[1]
             lng = res[2]
+
+            update = "update el_point set id_locality=-1 where id=" + str(idPoint)
+            cursor.execute(update)
+            db.commit()
+            threadLock.release()
  
             url='https://maps.googleapis.com/maps/api/geocode/json?latlng=' + str(lat) + ',' + str(lng) + '&sensor=false&language=fr'
             jsonRes = json.loads(httputils.get(url))
@@ -105,13 +112,22 @@ def updateLocality():
 
             update = "update el_point set id_locality=" + str(idLocality) + " where id=" + str(idPoint)
             cursor.execute(update)
+
+        else:
+            threadLock.release()
+ 
         db.commit()
     except:
         db.rollback()
         raise
     db.close()
 
-#for i in range (0, 3):
-for i in range(0, NB_REQUESTS):
-    updateLocality()
-#time.sleep(3)
+def launch():
+    for i in range(0, NB_REQUESTS):
+        updateLocality()
+
+threadLock = threading.Lock()
+a = threading.Thread(None, launch, None, (), {})
+b = threading.Thread(None, launch, None, (), {})
+a.start()
+b.start()

@@ -1,4 +1,4 @@
-import urllib2
+import httputils
 import json
 import random
 import MySQLdb
@@ -28,32 +28,36 @@ def getRandomPoint(minLat, maxLat, minLng, maxLng):
     else:
         return getRandomPoint(minLat, maxLat, minLng, maxLng)
 
-points = []
-for i in range(POINTS_PER_REQUEST):
-    (random_lat, random_lng) = getRandomPoint(area.minLat, area.maxLat, area.minLng, area.maxLng)
-    points.append(str(random_lat) + ',' + str(random_lng))
+
+def launch():
+    points = []
+    for i in range(POINTS_PER_REQUEST):
+        (random_lat, random_lng) = getRandomPoint(area.minLat, area.maxLat, area.minLng, area.maxLng)
+        points.append(str(random_lat) + ',' + str(random_lng))
 
 
-url='http://maps.googleapis.com/maps/api/elevation/json?sensor=false&locations=' + "|".join(points)
+    url='http://maps.googleapis.com/maps/api/elevation/json?sensor=false&locations=' + "|".join(points)
 
-req = urllib2.Request(url)
-opener = urllib2.build_opener()
-f = opener.open(req)
-json = json.loads(f.read())
+    jsonRes = json.loads(httputils.get(url))
 
-db = MySQLdb.connect("localhost", "elevation", "elevation", "elevation" )
-cursor = db.cursor()
-try:
-    for result in json['results']:
-        lat = str(result['location']['lat'])
-        lng = str(result['location']['lng'])
-        resolution = str(result['resolution'])
-        elevation = str(result['elevation'])
-        sql = "insert into el_point(area, date, lat, lng, res, elv) values ('" + area.name + "', now(), " + lat + ", " + lng + ", " + resolution + ", " + elevation + ");";
-        cursor.execute(sql)
-    db.commit()
-except:
-    db.rollback()
-    raise
+    db = MySQLdb.connect("localhost", "elevation", "elevation", "elevation" )
+    cursor = db.cursor()
+    try:
+        for result in jsonRes['results']:
+            lat = str(result['location']['lat'])
+            lng = str(result['location']['lng'])
+            resolution = str(result['resolution'])
+            elevation = str(result['elevation'])
+            sql = "insert into el_point(area, date, lat, lng, res, elv) values ('" + area.name + "', now(), " + lat + ", " + lng + ", " + resolution + ", " + elevation + ");";
+            cursor.execute(sql)
+        db.commit()
+    except:
+        db.rollback()
+        raise
 
-db.close()
+    db.close()
+
+
+for i in range(0, 6):
+    launch()
+

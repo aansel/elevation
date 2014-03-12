@@ -5,7 +5,8 @@ import urllib2
 
 def get(url):
     p = proxy.getRandomProxy()
-    proxy_handler  = urllib2.ProxyHandler({'https': p.username + ':' + p.password + '@' + p.ip + ':' + p.port})
+    proxy_details = p.username + ':' + p.password + '@' + p.ip + ':' + p.port
+    proxy_handler  = urllib2.ProxyHandler({'https': proxy_details, 'http': proxy_details})
 
     request = urllib2.Request(url)
     request.add_header('Accept-Encoding', 'gzip, deflate')
